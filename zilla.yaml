@@ -1,0 +1,95 @@
+name: Example
+vaults: {}
+bindings:
+  tcp_server5b316178-18e8-4d2d-8930-1512b3bb8f9b:
+    type: tcp
+    kind: server
+    options:
+      host: 0.0.0.0
+      port: 8080
+    exit: http_server5b316178-18e8-4d2d-8930-1512b3bb8f9b
+  http_server5b316178-18e8-4d2d-8930-1512b3bb8f9b:
+    type: http
+    kind: server
+    options:
+      access-control:
+        policy: cross-origin
+    routes:
+      - when:
+          - headers:
+              :method: GET
+              :path: /getOdds
+        exit: sse_server5b316178-18e8-4d2d-8930-1512b3bb8f9b
+      - when:
+          - headers:
+              :method: POST
+              :path: /makeBet
+        exit: http-kafka_proxy5b316178-18e8-4d2d-8930-1512b3bb8f9b
+  sse_server5b316178-18e8-4d2d-8930-1512b3bb8f9b:
+    type: sse
+    kind: server
+    exit: sse-kafka_proxy5b316178-18e8-4d2d-8930-1512b3bb8f9b
+  sse-kafka_proxy5b316178-18e8-4d2d-8930-1512b3bb8f9b:
+    type: sse-kafka
+    kind: proxy
+    routes:
+      - when:
+          - path: /getOdds
+        exit: kafka_cache_client7ecb3414-3105-462b-a775-2cc081893f7c
+        with:
+          event:
+            id: '["${base64(key)}","${etag}"]'
+          topic: OddsSnapshotTopic
+  http-kafka_proxy5b316178-18e8-4d2d-8930-1512b3bb8f9b:
+    type: http-kafka
+    kind: proxy
+    routes:
+      - when:
+          - method: POST
+            path: /makeBet
+        exit: kafka_cache_client7ecb3414-3105-462b-a775-2cc081893f7c
+        with:
+          capability: produce
+          reply-to: OddsTopic
+          topic: BettingTopic
+          key: ${idempotencyKey}
+          overrides: {}
+  kafka_cache_client7ecb3414-3105-462b-a775-2cc081893f7c:
+    type: kafka
+    kind: cache_client
+    exit: kafka_cache_server7ecb3414-3105-462b-a775-2cc081893f7c
+  kafka_cache_server7ecb3414-3105-462b-a775-2cc081893f7c:
+    type: kafka
+    kind: cache_server
+    options:
+      bootstrap:
+        - OddsTopic
+        - OddsSnapshotTopic
+    exit: kafka_client7ecb3414-3105-462b-a775-2cc081893f7c
+  kafka_client7ecb3414-3105-462b-a775-2cc081893f7c:
+    type: kafka
+    kind: client
+    exit: tls_client7ecb3414-3105-462b-a775-2cc081893f7c
+    options:
+      sasl:
+        mechanism: plain
+        username: <your username>
+        password: <your password>
+  tls_client7ecb3414-3105-462b-a775-2cc081893f7c:
+    type: tls
+    kind: client
+    options:
+      trustcacerts: true
+      sni:
+        - "pkc-n00kk.us-east-1.aws.confluent.cloud"
+    exit: tcp_client7ecb3414-3105-462b-a775-2cc081893f7c
+  tcp_client7ecb3414-3105-462b-a775-2cc081893f7c:
+    type: tcp
+    kind: client
+    options:
+      host: <your kafka bootstrap server name>
+      port: 9092
+    routes:
+      - when:
+          - cidr: 0.0.0.0/0
+guards: {}
