@@ -43,8 +43,8 @@ public class BettingAppStreams {
                         .betPrice(value2.getBetPrice()).build()))
                 .toStream().to("OddsTopic");
 
-        final Properties props = loadConfig("/Users/himanism/.confluent/java.config");
-        props.putIfAbsent(StreamsConfig.APPLICATION_ID_CONFIG, "BettingAppStreamApp1");
+        final Properties props = loadConfig("<Add path to file here>");
+        props.putIfAbsent(StreamsConfig.APPLICATION_ID_CONFIG, "BettingAppStreamApp");
         props.setProperty(StreamsConfig.REPLICATION_FACTOR_CONFIG, "3");
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), props);
@@ -58,7 +58,7 @@ public class BettingAppStreams {
             System.exit(1);
         }
 
-        Runtime.getRuntime().addShutdownHook(new Thread("BettingAppStreamApp1") {
+        Runtime.getRuntime().addShutdownHook(new Thread("BettingAppStreamApp") {
             @Override
             public void run() {
                 streams.close();
